@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PackWork" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F5F7F5</item>
+    </style>
+</resources>
