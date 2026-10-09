@@ -52,6 +52,7 @@ object Kind {
     const val OPENING = "opening"
     const val RESTOCK = "restock"
     const val ADJUSTMENT = "adjustment"
+    const val DISPATCH = "dispatch"
 }
 
 data class StockReceipt(

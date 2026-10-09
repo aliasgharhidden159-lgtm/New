@@ -80,6 +80,7 @@ object Activity {
     const val DAMAGE = "Home damage adjustment"
     const val PAYMENT = "Payment received"
     const val ADJUSTMENT = "Office stock adjustment"
+    const val DISPATCH = "Dispatched out of Office"
     const val OPENING = "Opening stock"
     const val RESTOCK = "Stock received"
 }
@@ -134,11 +135,16 @@ fun buildReport(store: StoreData, itemId: String, from: String, to: String): Rep
 
     for (r in store.stockReceipts) {
         if (r.itemId !in ids || !inRange(r.receivedAt, from, to)) continue
-        val adj = r.kind == Kind.ADJUSTMENT
+        val adj = r.kind == Kind.ADJUSTMENT || r.kind == Kind.DISPATCH
         rows.add(
             ReportRow(
                 id = "receipt-${r.id}", date = r.receivedAt,
-                activity = if (adj) Activity.ADJUSTMENT else if (r.kind == Kind.OPENING) Activity.OPENING else Activity.RESTOCK,
+                activity = when (r.kind) {
+                    Kind.ADJUSTMENT -> Activity.ADJUSTMENT
+                    Kind.DISPATCH -> Activity.DISPATCH
+                    Kind.OPENING -> Activity.OPENING
+                    else -> Activity.RESTOCK
+                },
                 itemName = r.itemNameSnapshot, ticketLabel = "—", unit = r.unitSnapshot,
                 inQty = if (adj) 0 else r.quantity, outQty = 0, packedIn = 0, unusedIn = 0, damagedQty = 0,
                 earned = 0.0, paid = 0.0,
