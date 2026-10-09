@@ -119,6 +119,20 @@ class PackWorkViewModel(app: Application) : AndroidViewModel(app) {
         return null
     }
 
+    fun dispatchStock(itemId: String, qty: Int, date: String, notes: String): String? {
+        val item = store.items.find { it.id == itemId } ?: return "Item not found."
+        if (qty < 1 || qty > item.officeStock) return "Enter a quantity between 1 and ${item.officeStock}."
+        val receipt = StockReceipt(newId(), item.id, item.name, item.unit, qty, date.ifBlank { today() }, Kind.DISPATCH, "out", notes.trim())
+        commit { s ->
+            s.copy(
+                items = s.items.map { if (it.id == item.id) it.copy(officeStock = it.officeStock - qty) else it },
+                stockReceipts = listOf(receipt) + s.stockReceipts,
+            )
+        }
+        notify("$qty ${item.unit} dispatched out of Office. Office stock is now ${item.officeStock - qty}. Tickets are kept.")
+        return null
+    }
+
     fun issue(itemId: String, qty: Int, issuedAt: String, dueAt: String, notes: String): String? {
         val item = store.items.find { it.id == itemId } ?: return "Choose an item."
         if (qty < 1 || qty > item.officeStock) return "Check the quantity. It must be between 1 and ${item.officeStock} in the Office Godown."
@@ -191,16 +205,18 @@ class PackWorkViewModel(app: Application) : AndroidViewModel(app) {
     fun requestDeleteReceipt(id: String) {
         val c = store.stockReceipts.find { it.id == id } ?: return
         val item = store.items.find { it.id == c.itemId }
-        val out = c.kind == Kind.ADJUSTMENT && c.adjustmentDirection == "out"
+        val out = (c.kind == Kind.ADJUSTMENT || c.kind == Kind.DISPATCH) && c.adjustmentDirection == "out"
         val w = if (out) c.quantity else -c.quantity
         if (item != null && w < 0 && item.officeStock < abs(w)) {
             notify("Cannot delete this entry: Office stock has only ${item.officeStock} ${item.unit} available. Correct or remove later Office-to-Home transfers first.")
             return
         }
-        val what = when (c.kind) { Kind.OPENING -> "opening stock"; Kind.RESTOCK -> "stock receipt"; else -> "stock adjustment" }
-        val extra = if (c.kind == Kind.ADJUSTMENT)
-            " This reverses the ${if (out) "decrease" else "increase"} of ${c.quantity} ${c.unitSnapshot} in Office stock."
-        else " This removes ${c.quantity} ${c.unitSnapshot} from Office stock."
+        val what = when (c.kind) { Kind.OPENING -> "opening stock"; Kind.RESTOCK -> "stock receipt"; Kind.DISPATCH -> "dispatch"; else -> "stock adjustment" }
+        val extra = when (c.kind) {
+            Kind.DISPATCH -> " This puts ${c.quantity} ${c.unitSnapshot} back into Office stock."
+            Kind.ADJUSTMENT -> " This reverses the ${if (out) "decrease" else "increase"} of ${c.quantity} ${c.unitSnapshot} in Office stock."
+            else -> " This removes ${c.quantity} ${c.unitSnapshot} from Office stock."
+        }
         confirm = ConfirmRequest("Delete this $what entry?", "Dated ${fmtDate(c.receivedAt)}.$extra", "Delete") {
             commit { s ->
                 s.copy(

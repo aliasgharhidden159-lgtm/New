@@ -14,6 +14,7 @@ import com.packwork.tracker.data.*
 sealed interface Modal {
     data class ItemForm(val itemId: String? = null) : Modal
     data class Restock(val itemId: String) : Modal
+    data class Dispatch(val itemId: String) : Modal
     data object Issue : Modal
     data class Return(val jobId: String) : Modal
     data class Payment(val jobId: String) : Modal
@@ -63,6 +64,7 @@ fun ModalHost(modal: Modal, vm: PackWorkViewModel, setModal: (Modal?) -> Unit) {
     when (modal) {
         is Modal.ItemForm -> ItemDialog(vm, modal.itemId, close)
         is Modal.Restock -> RestockDialog(vm, modal.itemId, close)
+        is Modal.Dispatch -> DispatchDialog(vm, modal.itemId, close)
         is Modal.Issue -> IssueDialog(vm, close, setModal)
         is Modal.Return -> ReturnDialog(vm, modal.jobId, close)
         is Modal.Payment -> PaymentDialog(vm, modal.jobId, close)
@@ -133,9 +135,39 @@ private fun RestockDialog(vm: PackWorkViewModel, itemId: String, close: () -> Un
         },
     ) {
         ContextBox(item.name, "Current Office Godown stock: ${item.officeStock} ${item.unit}")
-        IntInput("Quantity received (${item.unit})", qty, { qty = it })
+        IntInput("Quantity received (${item.unit})", qty, { qty = it }, autoFocus = true)
         DateField("Received date", date, { date = it })
         TextInput("Notes (optional)", notes, { notes = it }, placeholder = "Supplier, delivery, or batch details")
+    }
+}
+
+@Composable
+private fun DispatchDialog(vm: PackWorkViewModel, itemId: String, close: () -> Unit) {
+    val item = vm.store.items.find { it.id == itemId }
+    if (item == null) { close(); return }
+    var qty by remember { mutableStateOf(if (item.officeStock > 0) item.officeStock.toString() else "") }
+    var date by remember { mutableStateOf(today()) }
+    var notes by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    FormDialog(
+        title = "Dispatch out of Office",
+        subtitle = "Record stock leaving the Office Godown. Tickets, packing counts and payments stay in your records.",
+        confirmLabel = "Record dispatch", error = error, onDismiss = close,
+        onConfirm = {
+            error = vm.dispatchStock(itemId, qty.toIntOrNull() ?: 0, date, notes)
+            if (error == null) close()
+        },
+    ) {
+        ContextBox(item.name, "Office Godown now: ${item.officeStock} ${item.unit}")
+        IntInput("Quantity leaving Office (${item.unit})", qty, { qty = it }, autoFocus = true)
+        TextButton(onClick = { qty = item.officeStock.toString() }) { Text("Use full Office stock (${item.officeStock})") }
+        DateField("Dispatch date", date, { date = it })
+        TextInput("Notes (optional)", notes, { notes = it }, placeholder = "e.g. Delivered to company, batch name")
+        Text(
+            "Use this when finished goods leave the Office, so Office stock goes back to zero before the next batch arrives.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -212,7 +244,7 @@ private fun ReturnDialog(vm: PackWorkViewModel, jobId: String, close: () -> Unit
     ) {
         ContextBox(job.itemNameSnapshot, "${job.open} ${job.unitSnapshot} available in Home on this ticket · ${job.packed} packed so far")
         DateField("Transfer / reconciliation date", date, { date = it })
-        IntInput("Packed to Office", packed, { packed = it })
+        IntInput("Packed to Office", packed, { packed = it }, autoFocus = true)
         IntInput("Unused to Office", unused, { unused = it })
         IntInput("Damaged at Home", damaged, { damaged = it })
         TextInput("Notes (optional)", notes, { notes = it }, singleLine = false, minLines = 2, placeholder = "Anything to note about this transfer")
@@ -246,7 +278,7 @@ private fun PaymentDialog(vm: PackWorkViewModel, jobId: String, close: () -> Uni
         },
     ) {
         ContextBox(job.itemNameSnapshot, "Earned ${fmtMoney(job.earned, currency)} · unpaid ${fmtMoney(job.owed, currency)}")
-        DecimalInput("Payment amount ($currency)", amount, { amount = it })
+        DecimalInput("Payment amount ($currency)", amount, { amount = it }, autoFocus = true)
         DateField("Paid date", date, { date = it })
         DropdownField(
             label = "Method (optional)", selectedText = method.ifBlank { "Choose method" },

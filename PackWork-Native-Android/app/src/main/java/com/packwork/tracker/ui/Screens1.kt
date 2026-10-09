@@ -200,14 +200,19 @@ private fun ItemCard(item: Item, vm: PackWorkViewModel, onModal: (Modal) -> Unit
             TextButton(onClick = { onModal(Modal.Restock(item.id)) }) {
                 Icon(Icons.Outlined.Download, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Receive")
             }
+            TextButton(onClick = { onModal(Modal.Dispatch(item.id)) }, enabled = item.officeStock > 0) {
+                Icon(Icons.Outlined.Upload, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Dispatch")
+            }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { showEntries = !showEntries }) {
+                Text("Stock entries · ${entries.size}")
+                Icon(if (showEntries) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
+            }
             Spacer(Modifier.weight(1f))
             TextButton(onClick = { vm.requestDeleteItem(item.id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                 Icon(Icons.Outlined.Delete, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Delete")
             }
-        }
-        TextButton(onClick = { showEntries = !showEntries }) {
-            Text("Stock entries · ${entries.size}")
-            Icon(if (showEntries) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
         }
         if (showEntries) {
             if (entries.isEmpty()) {
@@ -220,13 +225,14 @@ private fun ItemCard(item: Item, vm: PackWorkViewModel, onModal: (Modal) -> Unit
                             when (e.kind) {
                                 Kind.OPENING -> "Opening stock"
                                 Kind.RESTOCK -> "Stock received"
+                                Kind.DISPATCH -> "Dispatched out of Office"
                                 else -> "Office stock adjustment ${if (e.adjustmentDirection == "out") "(decrease)" else "(increase)"}"
                             }, fontWeight = FontWeight.SemiBold,
                         )
                         Text(fmtDate(e.receivedAt) + if (e.notes.isNotBlank()) " · ${e.notes}" else "",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text((if (e.kind == Kind.ADJUSTMENT && e.adjustmentDirection == "out") "−" else "+") + "${e.quantity} ${e.unitSnapshot}", fontWeight = FontWeight.Bold)
+                    Text((if (e.adjustmentDirection == "out") "−" else "+") + "${e.quantity} ${e.unitSnapshot}", fontWeight = FontWeight.Bold)
                     IconButton(onClick = { vm.requestDeleteReceipt(e.id) }) {
                         Icon(Icons.Outlined.Delete, "Delete entry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     }

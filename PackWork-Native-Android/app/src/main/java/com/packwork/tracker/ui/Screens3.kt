@@ -88,7 +88,7 @@ fun ReportsScreen(vm: PackWorkViewModel, onModal: (Modal) -> Unit) {
                     Triple("Office → Home", fmtInt(sm.inventoryOut), "Transferred from Office"),
                     Triple("Home → Office", fmtInt(sm.homeToOffice), "Packed and unused"),
                     Triple("Stock received", fmtInt(sm.restockedIn), "Opening and receipts"),
-                    Triple("Office adjustments", fmtSigned(sm.stockAdjustments), "Manual corrections"),
+                    Triple("Office adjustments", fmtSigned(sm.stockAdjustments), "Corrections and dispatches"),
                     Triple("Total inventory in", fmtInt(sm.inventoryIn), "Home + stock receipts"),
                     Triple("Packed returned", fmtInt(sm.packedQty), "Completed units"),
                     Triple("Unused returned", fmtInt(sm.unusedQty), "Returned, not packed"),

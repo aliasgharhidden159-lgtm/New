@@ -20,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -160,13 +162,28 @@ fun TextInput(label: String, value: String, onChange: (String) -> Unit, modifier
 }
 
 @Composable
-fun IntInput(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    OutlinedTextField(
-        value = value, onValueChange = { onChange(it.filter(Char::isDigit).take(9)) },
-        label = { Text(label) }, singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = modifier.fillMaxWidth(),
-    )
+private fun NumberBox(
+    label: String, value: String, onValue: (String) -> Unit, type: KeyboardType,
+    modifier: Modifier, autoFocus: Boolean, placeholder: String,
+) {
+    val focus = remember { FocusRequester() }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        OutlinedTextField(
+            value = value, onValueChange = onValue, singleLine = true,
+            placeholder = { Text(placeholder) },
+            keyboardOptions = KeyboardOptions(keyboardType = type),
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        )
+    }
+    if (autoFocus) {
+        LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    }
+}
+
+@Composable
+fun IntInput(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, autoFocus: Boolean = false) {
+    NumberBox(label, value, { onChange(it.filter(Char::isDigit).take(9)) }, KeyboardType.Number, modifier, autoFocus, "Enter number")
 }
 
 private fun cleanDecimal(s: String): String {
@@ -180,13 +197,8 @@ private fun cleanDecimal(s: String): String {
 }
 
 @Composable
-fun DecimalInput(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    OutlinedTextField(
-        value = value, onValueChange = { onChange(cleanDecimal(it)) },
-        label = { Text(label) }, singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier.fillMaxWidth(),
-    )
+fun DecimalInput(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, autoFocus: Boolean = false) {
+    NumberBox(label, value, { onChange(cleanDecimal(it)) }, KeyboardType.Decimal, modifier, autoFocus, "Enter amount")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

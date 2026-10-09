@@ -100,8 +100,10 @@ private fun TicketCard(job: Job, vm: PackWorkViewModel, onModal: (Modal) -> Unit
         }
         if (expanded) {
             KeyValue("Saved piece rate", "${fmtMoney(job.rateSnapshot, cur)} / ${job.unitSnapshot}")
-            KeyValue("Returns", "${job.returns.size}")
-            KeyValue("Payments", "${job.payments.size}")
+            KeyValue("Sent to Home", "${job.issuedQty} ${job.unitSnapshot}")
+            KeyValue("Received back in Office", "${job.packed + job.unusedTotal} ${job.unitSnapshot}")
+            KeyValue("Packed / Unused / Damaged", "${job.packed} / ${job.unusedTotal} / ${job.damagedTotal}")
+            KeyValue("Payments received", fmtMoney(job.paid, cur))
             if (job.notes.isNotBlank()) {
                 Text(job.notes, style = MaterialTheme.typography.bodyMedium)
             }
@@ -115,6 +117,7 @@ private fun TicketCard(job: Job, vm: PackWorkViewModel, onModal: (Modal) -> Unit
                     Spacer(Modifier.width(6.dp))
                     Text("Fully reconciled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
+                InfoNote(Icons.Outlined.Info, "Returned goods are counted in Office stock. When they leave the Office, use Dispatch on the Stock tab. This ticket stays in your records and reports.")
             }
             job.returns.forEach { r ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
